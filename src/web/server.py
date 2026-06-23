@@ -10,22 +10,20 @@ Uso:
 import os
 import sys
 import json
-from flask import Flask, render_template, request, jsonify, session
+from flask import Flask, render_template, request, jsonify
 
-# Asegurar imports del motor
 ROOT = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 SRC  = os.path.join(ROOT, 'src')
 sys.path.insert(0, SRC)
 
 from engine.simulator import TuringMachineEngine
-from engine.validator import ValidationError
+from engine.validator import Validator, ValidationError
 
 app = Flask(__name__, template_folder='templates', static_folder='static')
 app.secret_key = 'turing-motor-2026-unipamplona'
 
 MACHINES_DIR = os.path.join(ROOT, 'machines')
 
-# Estado global de sesión por instancia de motor (simple: una sesión activa)
 _engine: TuringMachineEngine = None
 _machine_name: str = ''
 
@@ -33,35 +31,23 @@ _machine_name: str = ''
 # ── Utilidades ────────────────────────────────────────────────────────────────
 
 def list_machines():
-    """Retorna lista de archivos JSON disponibles en machines/."""
-    return sorted([
-        f for f in os.listdir(MACHINES_DIR)
-        if f.endswith('.json')
-    ])
+    return sorted([f for f in os.listdir(MACHINES_DIR) if f.endswith('.json')])
 
 
 def tape_to_list(engine: TuringMachineEngine):
-    """Convierte la cinta a lista de objetos {pos, symbol, is_head} para el frontend."""
     tape = engine.tape
     head = engine.head
     if not tape._cells:
         return [{'pos': 0, 'symbol': tape.blank, 'is_head': True}]
-
     min_pos = min(min(tape._cells.keys()), head) - 2
     max_pos = max(max(tape._cells.keys()), head) + 2
-
-    result = []
-    for pos in range(min_pos, max_pos + 1):
-        result.append({
-            'pos': pos,
-            'symbol': tape._cells.get(pos, tape.blank),
-            'is_head': (pos == head)
-        })
-    return result
+    return [
+        {'pos': pos, 'symbol': tape._cells.get(pos, tape.blank), 'is_head': (pos == head)}
+        for pos in range(min_pos, max_pos + 1)
+    ]
 
 
 def config_to_dict(config, tape_cells=None):
-    """Serializa una Configuration a dict JSON."""
     return {
         'step': config.step,
         'state': config.state,
@@ -97,6 +83,7 @@ def api_machines():
                 'states_count': len(spec.get('states', [])),
                 'transitions_count': len(spec.get('transitions', [])),
                 'tests_count': len(spec.get('tests', [])),
+                'imported': spec.get('_imported', False),
             })
         except Exception as e:
             result.append({'file': fname, 'name': fname, 'error': str(e)})
@@ -105,7 +92,6 @@ def api_machines():
 
 @app.route('/api/load', methods=['POST'])
 def api_load():
-    """Carga una máquina e inicializa el motor con la cadena de entrada."""
     global _engine, _machine_name
     data = request.get_json()
     filename = data.get('file', '')
@@ -143,28 +129,108 @@ def api_load():
     })
 
 
+@app.route('/api/import', methods=['POST'])
+def api_import():
+    """
+    Importa una máquina desde JSON enviado como texto en el body.
+    Realiza validación formal ANTES de guardar el archivo.
+    Devuelve errores detallados si la especificación es inválida.
+    """
+    data = request.get_json()
+    if not data or 'content' not in data:
+        return jsonify({'error': 'No se proporcionó contenido JSON.'}), 400
+
+    raw_content = data['content']
+    filename    = data.get('filename', 'imported_machine.json')
+
+    # Asegurar extensión .json
+    if not filename.endswith('.json'):
+        filename += '.json'
+
+    # Sanitizar nombre (evitar path traversal)
+    filename = os.path.basename(filename)
+
+    # 1. Parsear JSON — detectar errores de sintaxis
+    try:
+        spec = json.loads(raw_content)
+    except json.JSONDecodeError as e:
+        return jsonify({
+            'ok': False,
+            'stage': 'parse',
+            'error': f'JSON inválido: {str(e)}',
+            'details': [f'Línea {e.lineno}, columna {e.colno}: {e.msg}']
+        }), 400
+
+    # 2. Validación formal con el Validator del motor
+    validation_errors = []
+    try:
+        Validator.validate_spec(spec)
+    except ValidationError as e:
+        validation_errors.append(str(e))
+
+    # 3. Validaciones adicionales de recomendación (warnings)
+    warnings = []
+    if not spec.get('description'):
+        warnings.append('Recomendación: agrega un campo "description" para documentar la máquina.')
+    if not spec.get('tests'):
+        warnings.append('Recomendación: incluye casos de prueba en el campo "tests" para verificar la máquina.')
+    if len(spec.get('transitions', [])) == 0:
+        validation_errors.append('La máquina no tiene transiciones definidas.')
+
+    if validation_errors:
+        return jsonify({
+            'ok': False,
+            'stage': 'validation',
+            'error': 'La especificación no pasa la validación formal.',
+            'details': validation_errors,
+            'warnings': warnings
+        }), 400
+
+    # 4. Todo válido: marcar como importada y guardar
+    spec['_imported'] = True
+    dest_path = os.path.join(MACHINES_DIR, filename)
+
+    # Evitar sobreescribir máquinas integradas
+    builtin = {'anbn_decider.json', 'palindrome_decider.json', 'binary_enumerator.json'}
+    if filename in builtin:
+        base, ext = os.path.splitext(filename)
+        filename  = f"{base}_imported{ext}"
+        dest_path = os.path.join(MACHINES_DIR, filename)
+        warnings.append(f'Nombre en conflicto con máquina integrada. Guardado como "{filename}".')
+
+    with open(dest_path, 'w', encoding='utf-8') as f:
+        json.dump(spec, f, ensure_ascii=False, indent=2)
+
+    return jsonify({
+        'ok': True,
+        'filename': filename,
+        'name': spec.get('name', filename),
+        'mode': spec.get('mode', '?'),
+        'states_count': len(spec.get('states', [])),
+        'transitions_count': len(spec.get('transitions', [])),
+        'warnings': warnings,
+        'message': f'Máquina "{spec.get("name", filename)}" importada y validada correctamente.'
+    })
+
+
 @app.route('/api/step', methods=['POST'])
 def api_step():
-    """Avanza un paso en la ejecución."""
     global _engine
     if _engine is None:
         return jsonify({'error': 'Motor no inicializado. Carga una máquina primero.'}), 400
     if _engine._result in ('accept', 'reject'):
         return jsonify({
-            'ok': True,
-            'status': _engine._result,
+            'ok': True, 'status': _engine._result,
             'current': config_to_dict(_engine.trace[-1], tape_to_list(_engine)),
             'step_count': _engine.step_count,
-            'metrics': _engine.get_metrics(),
-            'done': True
+            'metrics': _engine.get_metrics(), 'done': True
         })
     try:
         status = _engine.step()
-        cfg = _engine.trace[-1]
-        done = status in ('accept', 'reject')
+        cfg    = _engine.trace[-1]
+        done   = status in ('accept', 'reject')
         return jsonify({
-            'ok': True,
-            'status': status,
+            'ok': True, 'status': status,
             'current': config_to_dict(cfg, tape_to_list(_engine)),
             'step_count': _engine.step_count,
             'metrics': _engine.get_metrics() if done else None,
@@ -176,26 +242,20 @@ def api_step():
 
 @app.route('/api/run', methods=['POST'])
 def api_run():
-    """Ejecuta la máquina hasta detenerse o alcanzar el límite."""
     global _engine
     if _engine is None:
         return jsonify({'error': 'Motor no inicializado.'}), 400
     data = request.get_json() or {}
     max_steps = int(data.get('max_steps', 10000))
     try:
-        result = _engine.run(max_steps=max_steps)
+        result  = _engine.run(max_steps=max_steps)
         metrics = _engine.get_metrics()
-        trace_summary = [
-            config_to_dict(c) for c in _engine.trace
-        ]
         return jsonify({
-            'ok': True,
-            'result': result,
-            'metrics': metrics,
+            'ok': True, 'result': result, 'metrics': metrics,
             'tape': tape_to_list(_engine),
             'current': config_to_dict(_engine.trace[-1], tape_to_list(_engine)),
             'step_count': _engine.step_count,
-            'trace': trace_summary
+            'trace': [config_to_dict(c) for c in _engine.trace]
         })
     except Exception as e:
         return jsonify({'error': str(e)}), 500
@@ -203,20 +263,17 @@ def api_run():
 
 @app.route('/api/reset', methods=['POST'])
 def api_reset():
-    """Reinicia la ejecución con la misma máquina y una cadena nueva."""
     global _engine
     if _engine is None:
         return jsonify({'error': 'Motor no inicializado.'}), 400
     data = request.get_json() or {}
-    input_str = data.get('input', '')
     try:
-        _engine.initialize(input_str)
+        _engine.initialize(data.get('input', ''))
         cfg = _engine.trace[0]
         return jsonify({
             'ok': True,
             'current': config_to_dict(cfg, tape_to_list(_engine)),
-            'step_count': 0,
-            'result': None
+            'step_count': 0, 'result': None
         })
     except ValidationError as e:
         return jsonify({'error': str(e)}), 400
@@ -226,13 +283,12 @@ def api_reset():
 
 @app.route('/api/tests', methods=['POST'])
 def api_tests():
-    """Ejecuta la suite de pruebas de la máquina cargada."""
     global _engine
     if _engine is None:
         return jsonify({'error': 'Motor no inicializado.'}), 400
     try:
         results = _engine.run_test_suite()
-        passed = sum(1 for r in results if r['passed'])
+        passed  = sum(1 for r in results if r['passed'])
         return jsonify({'ok': True, 'results': results, 'passed': passed, 'total': len(results)})
     except Exception as e:
         return jsonify({'error': str(e)}), 500

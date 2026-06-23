@@ -8,7 +8,6 @@
 </head>
 <body>
 
-<!-- HEADER -->
 <header>
   <div class="header-content">
     <div class="header-title">
@@ -35,6 +34,17 @@
           <button class="machine-btn" data-file="{{ m }}" onclick="selectMachine('{{ m }}')">{{ m }}</button>
           {% endfor %}
         </div>
+
+        <!-- Importar máquina -->
+        <div class="import-section">
+          <div class="import-divider">
+            <span>o importar nueva máquina</span>
+          </div>
+          <label class="import-btn" for="file-import" title="Seleccionar archivo .json">
+            📤 Importar archivo .json
+            <input type="file" id="file-import" accept=".json" style="display:none" onchange="importMachine(event)">
+          </label>
+        </div>
       </div>
 
       <!-- Info de la máquina cargada -->
@@ -49,14 +59,12 @@
         <label class="input-label">Cadena de entrada:</label>
         <input type="text" id="input-string" placeholder="Ej: aabb" class="input-field" />
         <p class="input-hint">Deja vacío para la cadena ε (vacía)</p>
-
         <div class="btn-group">
           <button class="btn btn-primary" onclick="loadAndInit()" id="btn-load">🔄 Cargar</button>
-          <button class="btn btn-step" onclick="doStep()" id="btn-step" disabled>⏭ Paso</button>
-          <button class="btn btn-run"  onclick="doRun()"  id="btn-run"  disabled>▶ Ejecutar</button>
-          <button class="btn btn-reset" onclick="doReset()" id="btn-reset" disabled>↺ Reiniciar</button>
+          <button class="btn btn-step"    onclick="doStep()"     id="btn-step"  disabled>⏭ Paso</button>
+          <button class="btn btn-run"     onclick="doRun()"      id="btn-run"   disabled>▶ Ejecutar</button>
+          <button class="btn btn-reset"   onclick="doReset()"    id="btn-reset" disabled>↺ Reiniciar</button>
         </div>
-
         <div class="input-row">
           <label class="input-label" style="margin-top:8px">Límite de pasos:</label>
           <input type="number" id="max-steps" value="10000" min="1" max="100000" class="input-field-sm" />
@@ -72,7 +80,7 @@
       <!-- Suite de pruebas -->
       <div class="card" id="tests-card" style="display:none">
         <h2 class="card-title">✅ Suite de pruebas</h2>
-        <button class="btn btn-tests" onclick="runTests()">Ejecutar todas</button>
+        <button class="btn-tests" onclick="runTests()">Ejecutar todas</button>
         <div id="tests-content" style="margin-top:10px"></div>
       </div>
 
@@ -80,6 +88,20 @@
 
     <!-- PANEL CENTRAL -->
     <section class="main-panel">
+
+      <!-- Modal de validación de importación -->
+      <div id="import-modal" class="modal" style="display:none">
+        <div class="modal-box">
+          <div class="modal-header" id="modal-header">
+            <span id="modal-icon"></span>
+            <span id="modal-title"></span>
+          </div>
+          <div id="modal-body" class="modal-body"></div>
+          <div class="modal-footer">
+            <button class="btn btn-primary" onclick="closeModal()">Cerrar</button>
+          </div>
+        </div>
+      </div>
 
       <!-- Estado actual -->
       <div class="card state-card">
@@ -95,13 +117,13 @@
           </div>
           <div id="result-badge" class="result-badge" style="display:none"></div>
         </div>
-        <div class="transition-row" id="transition-row">
+        <div class="transition-row">
           <span class="transition-label">δ:</span>
           <span id="transition-text" class="transition-text">&#8212;</span>
         </div>
       </div>
 
-      <!-- Visualizador de cinta -->
+      <!-- Cinta -->
       <div class="card tape-card">
         <h2 class="card-title">📧 Cinta</h2>
         <div class="tape-wrapper">
@@ -115,22 +137,15 @@
         </div>
       </div>
 
-      <!-- Traza de ejecución -->
+      <!-- Traza -->
       <div class="card">
         <div class="trace-header">
           <h2 class="card-title">🗒 Traza de ejecución</h2>
           <button class="btn-clear" onclick="clearTrace()">Limpiar</button>
         </div>
         <div class="trace-wrapper">
-          <table class="trace-table" id="trace-table">
-            <thead>
-              <tr>
-                <th>Paso</th>
-                <th>Estado</th>
-                <th>Símbolo leído</th>
-                <th>Transición aplicada</th>
-              </tr>
-            </thead>
+          <table class="trace-table">
+            <thead><tr><th>Paso</th><th>Estado</th><th>Símbolo leído</th><th>Transición aplicada</th></tr></thead>
             <tbody id="trace-body">
               <tr><td colspan="4" class="trace-empty">Aquí aparecerá la traza de ejecución.</td></tr>
             </tbody>
@@ -138,14 +153,12 @@
         </div>
       </div>
 
-      <!-- Tabla de transiciones de la máquina -->
+      <!-- Tabla delta -->
       <div class="card" id="delta-card" style="display:none">
         <h2 class="card-title">𝜹 Función de transición</h2>
         <div class="trace-wrapper">
-          <table class="trace-table" id="delta-table">
-            <thead>
-              <tr><th>Desde</th><th>Lee</th><th>Escribe</th><th>Mueve</th><th>Hacia</th></tr>
-            </thead>
+          <table class="trace-table">
+            <thead><tr><th>Desde</th><th>Lee</th><th>Escribe</th><th>Mueve</th><th>Hacia</th></tr></thead>
             <tbody id="delta-body"></tbody>
           </table>
         </div>
