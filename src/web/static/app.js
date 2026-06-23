@@ -25,7 +25,7 @@ function selectMachine(file) {
         <div class="info-row"><span class="info-key">Estados:</span><span>${m.states_count}</span></div>
         <div class="info-row"><span class="info-key">Transiciones:</span><span>${m.transitions_count}</span></div>
         <div class="info-row"><span class="info-key">Pruebas:</span><span>${m.tests_count}</span></div>
-        ${m.imported ? '<div style="margin-top:6px"><span style="background:#fff3cd;padding:2px 8px;border-radius:10px;font-size:0.78rem;color:#856404">📤 Importada externamente</span></div>' : ''}
+        ${m.imported ? '<div style="margin-top:6px"><span style="background:#fff3cd;padding:2px 8px;border-radius:10px;font-size:0.78rem;color:#856404">📤 Importada</span></div>' : ''}
         ${m.description ? `<div style="margin-top:8px;font-size:0.79rem;color:#666;font-style:italic">${m.description}</div>` : ''}
       `;
       document.getElementById('machine-info-card').style.display = 'block';
@@ -49,7 +49,7 @@ function importMachine(event) {
     } catch(err) {
       showModal('error', '❌ Error de sintaxis JSON',
         `<p>El archivo <strong>${filename}</strong> no es un JSON válido.</p>
-         <div class="modal-section-title">Detalle del error</div>
+         <div class="modal-section-title">Detalle</div>
          <div class="modal-error-item">${err.message}</div>`);
       return;
     }
@@ -61,29 +61,21 @@ function importMachine(event) {
     .then(r => r.json())
     .then(data => {
       if (!data.ok) {
-        let body = `<p>El archivo <strong>${filename}</strong> no pasó la validación formal.</p>`;
+        let body = `<p><strong>${filename}</strong> no pasó la validación.</p>`;
         if (data.details && data.details.length > 0) {
-          body += `<div class="modal-section-title">❌ Errores (${data.details.length})</div>`;
+          body += `<div class="modal-section-title">❌ Errores</div>`;
           data.details.forEach(d => { body += `<div class="modal-error-item">${d}</div>`; });
-        }
-        if (data.warnings && data.warnings.length > 0) {
-          body += `<div class="modal-section-title">⚠️ Advertencias</div>`;
-          data.warnings.forEach(w => { body += `<div class="modal-warning-item">${w}</div>`; });
         }
         showModal('error', '❌ Validación fallida', body);
         return;
       }
-      let body = `<p>Máquina validada y guardada.</p>
+      let body = `<p>Máquina importada correctamente.</p>
         <div class="modal-success-info">
           <div class="modal-info-chip"><b>Nombre:</b> ${data.name}</div>
           <div class="modal-info-chip"><b>Modo:</b> ${data.mode}</div>
           <div class="modal-info-chip"><b>Estados:</b> ${data.states_count}</div>
           <div class="modal-info-chip"><b>Transiciones:</b> ${data.transitions_count}</div>
         </div>`;
-      if (data.warnings && data.warnings.length > 0) {
-        body += `<div class="modal-section-title">⚠️ Avisos</div>`;
-        data.warnings.forEach(w => { body += `<div class="modal-warning-item">${w}</div>`; });
-      }
       showModal('success', '✅ Máquina importada', body);
       addMachineButton(data.filename, true);
       selectedFile = data.filename;
@@ -129,7 +121,7 @@ document.addEventListener('DOMContentLoaded', () => {
   });
 });
 
-// ---- Cargar máquina e inicializar --------------------------------------
+// ---- Cargar máquina -----------------------------------------------------
 function loadAndInit() {
   if (!selectedFile) { alert('Selecciona una máquina primero.'); return; }
   const input = document.getElementById('input-string').value;
@@ -141,7 +133,7 @@ function loadAndInit() {
   })
   .then(r => r.json())
   .then(data => {
-    if (data.error) { showModal('error', '❌ Error al cargar', `<p>${data.error}</p>`); return; }
+    if (data.error) { showModal('error', '❌ Error', `<p>${data.error}</p>`); return; }
     updateState(data.current.state, null, data.machine);
     updateTape(data.current.tape);
     setStepCount(0); setTransition('(inicio)');
@@ -149,11 +141,12 @@ function loadAndInit() {
     addTraceRow(0, data.current.state, data.current.head_symbol, '(inicio)');
     document.getElementById('tests-card').style.display = 'block';
     document.getElementById('metrics-card').style.display = 'none';
+    document.getElementById('tests-content').innerHTML = '';
   })
   .catch(err => showModal('error', '❌ Error', `<p>${err.toString()}</p>`));
 }
 
-// ---- Paso a paso -------------------------------------------------------
+// ---- Paso a paso --------------------------------------------------------
 function doStep() {
   if (isRunning) return;
   fetch('/api/step', { method: 'POST' })
@@ -173,7 +166,7 @@ function doStep() {
   .catch(err => showModal('error', '❌ Error', `<p>${err.toString()}</p>`));
 }
 
-// ---- Ejecutar completo -------------------------------------------------
+// ---- Ejecutar -----------------------------------------------------------
 function doRun() {
   if (isRunning) return;
   isRunning = true;
@@ -198,7 +191,7 @@ function doRun() {
   .catch(err => { isRunning = false; showModal('error', '❌ Error', `<p>${err.toString()}</p>`); });
 }
 
-// ---- Reiniciar ---------------------------------------------------------
+// ---- Reiniciar ----------------------------------------------------------
 function doReset() {
   const input = document.getElementById('input-string').value;
   clearTrace(); resetResultBadge();
@@ -219,52 +212,51 @@ function doReset() {
 }
 
 // ================================================================
-// SUITE DE PRUEBAS  — input limpio, un solo resultado, colores correctos
+// SUITE DE PRUEBAS  — rediseñada, limpia y profesional
 // ================================================================
 function runTests() {
   fetch('/api/tests', { method: 'POST' })
   .then(r => r.json())
   .then(data => {
     if (data.error) { showModal('error', '❌ Error', `<p>${data.error}</p>`); return; }
-    const container = document.getElementById('tests-content');
-    const passedCount = data.results.filter(r => r.passed === true).length;
-    let html = `<div class="tests-summary">${passedCount}/${data.total} pruebas pasadas</div>`;
+
+    const passed = data.results.filter(r => r.passed === true).length;
+    const total  = data.total;
+    const allOk  = passed === total;
+
+    let html = `
+      <div class="tests-header">
+        <span class="tests-score ${allOk ? 'all-pass' : 'some-fail'}">
+          ${passed}/${total}
+        </span>
+        <span class="tests-label">${allOk ? 'Todas pasaron' : 'pruebas pasadas'}</span>
+      </div>
+      <div class="tests-list">`;
 
     data.results.forEach(r => {
-      const passed = r.passed === true;
-      const cls    = passed ? 'pass' : 'fail';
-      const icon   = passed ? '✅' : '❌';
+      const ok  = r.passed === true;
+      const inp = r.input === '' ? 'ε' : r.input;
 
-      // Input display: cadena vacía → "ε (vacía)", resto → entre comillas simples
-      const raw = String(r.input);                         // ya viene limpio del servidor
-      const inp = raw === '' ? 'ε (vacía)' : `'${raw}'`;
+      // Color del resultado
+      const resultColor = r.actual === 'accept' ? 'color:#1a7f4b' : 'color:#c0392b';
 
-      // Resultado: si pasa solo muestra el valor; si falla muestra esperado vs obtenido
-      let resultLabel;
-      if (passed) {
-        // Verde: solo el resultado real
-        const color = r.actual === 'accept' ? '#1a7f4b' : '#c0392b';
-        resultLabel = `<span class="test-actual" style="color:${color};font-weight:700">${r.actual}</span>`;
-      } else {
-        // Rojo: muestra qué se esperaba y qué salió
-        resultLabel = `<span class="test-expected" style="color:#555">esperado: <strong>${r.expected}</strong></span>
-                       <span class="test-actual" style="color:#c0392b;font-weight:700;margin-left:6px">obtuvo: ${r.actual}</span>`;
-      }
-
-      html += `<div class="test-row ${cls}">
-        <span class="test-icon">${icon}</span>
-        <span class="test-input">${inp}</span>
-        <span style="margin:0 4px;color:#888">→</span>
-        ${resultLabel}
-      </div>`;
+      html += `
+        <div class="test-item ${ok ? 'pass' : 'fail'}">
+          <span class="test-status">${ok ? '✓' : '✗'}</span>
+          <code class="test-inp">${inp}</code>
+          <span class="test-arrow">→</span>
+          <span class="test-result" style="${resultColor}">${r.actual}</span>
+          ${ !ok ? `<span class="test-expected">(esperado: ${r.expected})</span>` : '' }
+        </div>`;
     });
 
-    container.innerHTML = html;
+    html += '</div>';
+    document.getElementById('tests-content').innerHTML = html;
   })
   .catch(err => showModal('error', '❌ Error', `<p>${err.toString()}</p>`));
 }
 
-// ---- Helpers de UI -----------------------------------------------------
+// ---- Helpers UI ---------------------------------------------------------
 function updateTape(cells) {
   const container = document.getElementById('tape-container');
   if (!cells || cells.length === 0) return;

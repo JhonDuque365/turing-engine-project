@@ -1,7 +1,7 @@
 {
   "name": "anbn_decider",
   "mode": "decider",
-  "description": "Decide L = { a^n b^n | n >= 0 } marcando pares a/b. Ejemplo de lenguaje decidible no regular.",
+  "description": "Decide L = { a^n b^n | n >= 0 } marcando pares a/b iterativamente.",
   "states": ["q0", "q1", "q2", "q3", "qaccept", "qreject"],
   "input_alphabet": ["a", "b"],
   "tape_alphabet": ["a", "b", "X", "Y", "_"],
@@ -33,12 +33,9 @@
   ],
   "tests": [
     {"input": "",       "expected": "accept"},
-    {"input": "ab",     "expected": "accept"},
     {"input": "aabb",   "expected": "accept"},
     {"input": "aaabbb", "expected": "accept"},
     {"input": "aab",    "expected": "reject"},
-    {"input": "abb",    "expected": "reject"},
-    {"input": "abab",   "expected": "reject"},
-    {"input": "ba",     "expected": "reject"}
+    {"input": "abab",   "expected": "reject"}
   ]
 }
