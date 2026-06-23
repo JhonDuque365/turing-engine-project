@@ -1,7 +1,7 @@
 {
   "name": "palindrome_decider",
   "mode": "decider",
-  "description": "Decide PAL = { w | w = w^R } sobre el alfabeto {0, 1}. La máquina compara los extremos de la cadena iterativamente.",
+  "description": "Decide PAL = { w | w = w^R } sobre el alfabeto {0, 1}. La máquina compara iterativamente el símbolo más a la izquierda con el más a la derecha, marcando ambos con X si coinciden y rechazando si difieren. Acepta cuando todos los símbolos han sido emparejados.",
   "states": ["q0", "q_seek0", "q_seek1", "q_ret0", "q_ret1", "q_check", "qaccept", "qreject"],
   "input_alphabet": ["0", "1"],
   "tape_alphabet": ["0", "1", "X", "_"],
@@ -34,15 +34,21 @@
     {"from": "q_check", "read": "_", "to": "qaccept", "write": "_", "move": "S"}
   ],
   "tests": [
-    {"input": "",     "expected": "accept"},
-    {"input": "0",    "expected": "accept"},
-    {"input": "1",    "expected": "accept"},
-    {"input": "00",   "expected": "accept"},
-    {"input": "11",   "expected": "accept"},
-    {"input": "010",  "expected": "accept"},
-    {"input": "0110", "expected": "accept"},
-    {"input": "01",   "expected": "reject"},
-    {"input": "001",  "expected": "reject"},
-    {"input": "0100", "expected": "reject"}
+    {"input": "",      "expected": "accept", "note": "cadena vacía, n=0"},
+    {"input": "0",     "expected": "accept", "note": "un solo símbolo siempre es palíndromo"},
+    {"input": "1",     "expected": "accept", "note": "un solo símbolo siempre es palíndromo"},
+    {"input": "00",    "expected": "accept", "note": "par simétrico"},
+    {"input": "11",    "expected": "accept", "note": "par simétrico"},
+    {"input": "010",   "expected": "accept", "note": "palíndromo impar con 0 en el centro"},
+    {"input": "101",   "expected": "accept", "note": "palíndromo impar con 1 en el centro"},
+    {"input": "0110",  "expected": "accept", "note": "palíndromo par de longitud 4"},
+    {"input": "1001",  "expected": "accept", "note": "palíndromo par de longitud 4"},
+    {"input": "11011", "expected": "accept", "note": "palíndromo impar de longitud 5"},
+    {"input": "01",    "expected": "reject", "note": "extremos distintos"},
+    {"input": "10",    "expected": "reject", "note": "extremos distintos, orden inverso"},
+    {"input": "001",   "expected": "reject", "note": "primer y último símbolo distintos"},
+    {"input": "0100",  "expected": "reject", "note": "segundo y penúltimo no coinciden"},
+    {"input": "1010",  "expected": "reject", "note": "no es palíndromo"},
+    {"input": "10101", "expected": "reject", "note": "no es palíndromo aunque alterna"}
   ]
 }

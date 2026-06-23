@@ -1,7 +1,7 @@
 {
   "name": "binary_enumerator",
   "mode": "enumerator",
-  "description": "Enumerador de cadenas binarias en orden por longitud. Implementado como módulo Python (ver src/engine/enumerator.py).",
+  "description": "Enumerador de cadenas binarias en orden canónico por longitud: ε, 0, 1, 00, 01, 10, 11, 000, ... Este modo NO decide pertenencia a un lenguaje: su contrato computacional es GENERAR cadenas, no aceptar o rechazar. Por eso su suite de pruebas es mínima y solo verifica que el motor puede procesar cadenas binarias individuales. Para ejecutar el enumerador completo, usar: python -m src.engine.enumerator",
   "states": ["q0", "qaccept", "qreject"],
   "input_alphabet": ["0", "1"],
   "tape_alphabet": ["0", "1", "_"],
@@ -15,9 +15,13 @@
     {"from": "q0", "read": "_", "to": "qaccept", "write": "_", "move": "S"}
   ],
   "tests": [
-    {"input": "0",  "expected": "accept"},
-    {"input": "1",  "expected": "accept"},
-    {"input": "00", "expected": "accept"}
+    {"input": "0",  "expected": "accept", "note": "cadena binaria válida"},
+    {"input": "1",  "expected": "accept", "note": "cadena binaria válida"},
+    {"input": "00", "expected": "accept", "note": "cadena binaria válida"},
+    {"input": "01", "expected": "accept", "note": "cadena binaria válida"},
+    {"input": "10", "expected": "accept", "note": "cadena binaria válida"},
+    {"input": "11", "expected": "accept", "note": "cadena binaria válida"}
   ],
-  "enumerator_note": "Para ejecutar el enumerador de cadenas binarias, usar: python -c 'from src.engine.enumerator import BinaryEnumerator; BinaryEnumerator.enumerate(10)'"
+  "enumerator_note": "IMPORTANTE: este archivo describe el modo 'enumerator'. A diferencia de un decididor, un enumerador no responde accept/reject a una entrada: su función es PRODUCIR cadenas en la cinta de salida. La suite de pruebas aquí es ilustrativa. El enumerador real se implementa en src/engine/enumerator.py y genera: ε, 0, 1, 00, 01, 10, 11, 000...",
+  "why_minimal_tests": "Un enumerador no tiene contrato booleano. Incluir pruebas de accept/reject sería conceptualmente incorrecto. El modo 'enumerator' se evalúa por las cadenas que genera, no por si acepta o rechaza una entrada puntual."
 }
