@@ -1,0 +1,165 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Motor de Máquina de Turing – Universidad de Pamplona</title>
+  <link rel="stylesheet" href="/static/style.css">
+</head>
+<body>
+
+<!-- HEADER -->
+<header>
+  <div class="header-content">
+    <div class="header-title">
+      <span class="header-icon">🧠</span>
+      <div>
+        <h1>Motor Genérico de Máquina de Turing</h1>
+        <p>Teoría de la Computación &mdash; Universidad de Pamplona &mdash; 2026-1 &mdash; Prof. Omar Portilla Jaimes</p>
+      </div>
+    </div>
+  </div>
+</header>
+
+<main class="container">
+  <div class="layout">
+
+    <!-- PANEL IZQUIERDO -->
+    <aside class="sidebar">
+
+      <!-- Selector de máquina -->
+      <div class="card">
+        <h2 class="card-title">📂 Máquinas disponibles</h2>
+        <div id="machine-list">
+          {% for m in machines %}
+          <button class="machine-btn" data-file="{{ m }}" onclick="selectMachine('{{ m }}')">{{ m }}</button>
+          {% endfor %}
+        </div>
+      </div>
+
+      <!-- Info de la máquina cargada -->
+      <div class="card" id="machine-info-card" style="display:none">
+        <h2 class="card-title">ℹ️ Máquina cargada</h2>
+        <div id="machine-info"></div>
+      </div>
+
+      <!-- Entrada y controles -->
+      <div class="card">
+        <h2 class="card-title">▶️ Ejecución</h2>
+        <label class="input-label">Cadena de entrada:</label>
+        <input type="text" id="input-string" placeholder="Ej: aabb" class="input-field" />
+        <p class="input-hint">Deja vacío para la cadena ε (vacía)</p>
+
+        <div class="btn-group">
+          <button class="btn btn-primary" onclick="loadAndInit()" id="btn-load">🔄 Cargar</button>
+          <button class="btn btn-step" onclick="doStep()" id="btn-step" disabled>⏭ Paso</button>
+          <button class="btn btn-run"  onclick="doRun()"  id="btn-run"  disabled>▶ Ejecutar</button>
+          <button class="btn btn-reset" onclick="doReset()" id="btn-reset" disabled>↺ Reiniciar</button>
+        </div>
+
+        <div class="input-row">
+          <label class="input-label" style="margin-top:8px">Límite de pasos:</label>
+          <input type="number" id="max-steps" value="10000" min="1" max="100000" class="input-field-sm" />
+        </div>
+      </div>
+
+      <!-- Métricas -->
+      <div class="card" id="metrics-card" style="display:none">
+        <h2 class="card-title">📊 Métricas</h2>
+        <div id="metrics-content"></div>
+      </div>
+
+      <!-- Suite de pruebas -->
+      <div class="card" id="tests-card" style="display:none">
+        <h2 class="card-title">✅ Suite de pruebas</h2>
+        <button class="btn btn-tests" onclick="runTests()">Ejecutar todas</button>
+        <div id="tests-content" style="margin-top:10px"></div>
+      </div>
+
+    </aside>
+
+    <!-- PANEL CENTRAL -->
+    <section class="main-panel">
+
+      <!-- Estado actual -->
+      <div class="card state-card">
+        <div class="state-row">
+          <div class="state-badge" id="state-badge">q₀</div>
+          <div class="state-info">
+            <span class="state-label">Estado actual</span>
+            <span id="state-name" class="state-name">&#8212;</span>
+          </div>
+          <div class="step-counter">
+            <span class="step-label">Paso</span>
+            <span id="step-number" class="step-number">0</span>
+          </div>
+          <div id="result-badge" class="result-badge" style="display:none"></div>
+        </div>
+        <div class="transition-row" id="transition-row">
+          <span class="transition-label">δ:</span>
+          <span id="transition-text" class="transition-text">&#8212;</span>
+        </div>
+      </div>
+
+      <!-- Visualizador de cinta -->
+      <div class="card tape-card">
+        <h2 class="card-title">📧 Cinta</h2>
+        <div class="tape-wrapper">
+          <div id="tape-container" class="tape-container">
+            <div class="tape-empty">← Carga una máquina e ingresa una cadena →</div>
+          </div>
+        </div>
+        <div class="tape-legend">
+          <span class="legend-head">▲ cabezal</span>
+          <span class="legend-blank">_ = blanco</span>
+        </div>
+      </div>
+
+      <!-- Traza de ejecución -->
+      <div class="card">
+        <div class="trace-header">
+          <h2 class="card-title">🗒 Traza de ejecución</h2>
+          <button class="btn-clear" onclick="clearTrace()">Limpiar</button>
+        </div>
+        <div class="trace-wrapper">
+          <table class="trace-table" id="trace-table">
+            <thead>
+              <tr>
+                <th>Paso</th>
+                <th>Estado</th>
+                <th>Símbolo leído</th>
+                <th>Transición aplicada</th>
+              </tr>
+            </thead>
+            <tbody id="trace-body">
+              <tr><td colspan="4" class="trace-empty">Aquí aparecerá la traza de ejecución.</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- Tabla de transiciones de la máquina -->
+      <div class="card" id="delta-card" style="display:none">
+        <h2 class="card-title">𝜹 Función de transición</h2>
+        <div class="trace-wrapper">
+          <table class="trace-table" id="delta-table">
+            <thead>
+              <tr><th>Desde</th><th>Lee</th><th>Escribe</th><th>Mueve</th><th>Hacia</th></tr>
+            </thead>
+            <tbody id="delta-body"></tbody>
+          </table>
+        </div>
+      </div>
+
+    </section>
+  </div>
+</main>
+
+<footer>
+  <p>Motor Genérico de Máquina de Turing &mdash; Teoría de la Computación &mdash; Universidad de Pamplona 2026-1</p>
+  <p>Jhon Duque &mdash; Prof. Omar Portilla Jaimes</p>
+</footer>
+
+<script src="/static/app.js"></script>
+</body>
+</html>

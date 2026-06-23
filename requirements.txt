@@ -1,3 +1,3 @@
-# No se requieren dependencias externas para el motor base
-# Dependencias opcionales para la interfaz web
+# Dependencias del proyecto
+flask>=3.0.0
 colorama>=0.4.6

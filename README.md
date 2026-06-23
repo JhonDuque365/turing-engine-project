@@ -1,10 +1,9 @@
 # Motor Genérico de Máquina de Turing
 
 **Asignatura:** Teoría de la Computación  
-**Programa:** Ingeniería de Sistemas  
-**Universidad:** Universidad de Pamplona  
-**Periodo:** 2026-1  
+**Programa:** Ingeniería de Sistemas – Universidad de Pamplona – 2026-1  
 **Profesor:** Omar Portilla Jaimes  
+**Autor:** Jhon Duque  
 
 ---
 
@@ -20,12 +19,20 @@ turing-engine-project/
 ├── requirements.txt
 ├── src/
 │   ├── engine/
-│   │   ├── tape.py          # Estructura de la cinta
-│   │   ├── machine.py       # Modelo formal de la MT
-│   │   ├── simulator.py     # Motor de simulación
-│   │   └── validator.py     # Validador formal
-│   └── ui/
-│       └── app.py           # Interfaz de consola
+│   │   ├── tape.py          # Cinta infinita (dict)
+│   │   ├── machine.py       # Modelo formal M=(Q,Σ,Γ,δ,q0,qa,qr)
+│   │   ├── simulator.py     # Motor genérico de simulación
+│   │   ├── validator.py     # Validador formal de especificaciones
+│   │   └── enumerator.py    # Enumerador de cadenas binarias
+│   ├── ui/
+│   │   └── app.py           # Interfaz de consola interactiva
+│   └── web/
+│       ├── server.py        # Servidor Flask (interfaz web)
+│       ├── templates/
+│       │   └── index.html
+│       └── static/
+│           ├── style.css
+│           └── app.js
 ├── machines/
 │   ├── anbn_decider.json
 │   ├── palindrome_decider.json
@@ -39,6 +46,8 @@ turing-engine-project/
     └── traces/
 ```
 
+---
+
 ## Instalación
 
 ```bash
@@ -47,26 +56,45 @@ cd turing-engine-project
 pip install -r requirements.txt
 ```
 
-## Uso
+---
 
-### Interfaz interactiva de consola
+## Uso – Interfaz Web (Flask) ⭐
+
+```bash
+python src/web/server.py
+```
+
+Luego abrir en el navegador: **http://localhost:5000**
+
+La interfaz web permite:
+- Seleccionar cualquier máquina de la biblioteca
+- Ver la información formal de la máquina (modo, estados, transiciones)
+- Ingresar una cadena de entrada
+- Ejecutar **paso a paso** con animación de la cinta
+- Ejecutar completo hasta detenerse
+- Ver la **traza completa** de configuraciones
+- Consultar **métricas** de ejecución
+- Ejecutar la **suite de pruebas** integrada
+- Ver la **función de transición δ** completa de cada máquina
+
+---
+
+## Uso – Interfaz de consola
+
 ```bash
 python src/ui/app.py
 ```
 
-### Ejecución directa
-```python
-from src.engine.simulator import TuringMachineEngine
-import json
+---
 
-with open('machines/anbn_decider.json') as f:
-    spec = json.load(f)
+## Uso – Pruebas unitarias
 
-engine = TuringMachineEngine(spec)
-engine.initialize('aabb')
-result = engine.run(max_steps=1000)
-print(result)  # accept
+```bash
+python -m unittest tests/test_anbn.py -v
+python -m unittest tests/test_palindrome.py -v
 ```
+
+---
 
 ## Máquinas implementadas
 
@@ -76,11 +104,6 @@ print(result)  # accept
 | `palindrome_decider` | Decidible | PAL = { w \| w = wᴿ } sobre {0,1} |
 | `binary_enumerator` | Enumerable | Cadenas binarias por longitud |
 
-## Modos de máquina
+## Nota conceptual importante
 
-- `decider` → siempre acepta o rechaza
-- `recognizer` → acepta entradas del lenguaje, puede no detenerse en negativas
-- `enumerator` → genera cadenas de un lenguaje
-- `function` → computa una salida en la cinta
-
-> ⚠️ **Importante:** Si la máquina no se detiene dentro del límite de pasos, el resultado es `timeout_without_conclusion`, **no** rechazo.
+> Si la máquina no se detiene dentro del límite de pasos, el resultado es `timeout_without_conclusion`, **NO** rechazo. Rechazar y no detenerse son comportamientos formalmente distintos.
