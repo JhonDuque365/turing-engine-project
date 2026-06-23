@@ -18,10 +18,10 @@
   "reject": "qreject",
   "transitions": [
 
-    {"from": "q0", "read": "_", "to": "qaccept",  "write": "_", "move": "S"},
-    {"from": "q0", "read": "X", "to": "q_check",  "write": "X", "move": "R"},
-    {"from": "q0", "read": "0", "to": "q_seek0",  "write": "X", "move": "R"},
-    {"from": "q0", "read": "1", "to": "q_seek1",  "write": "X", "move": "R"},
+    {"from": "q0", "read": "_", "to": "qaccept", "write": "_", "move": "S"},
+    {"from": "q0", "read": "X", "to": "q_check", "write": "X", "move": "R"},
+    {"from": "q0", "read": "0", "to": "q_seek0", "write": "X", "move": "R"},
+    {"from": "q0", "read": "1", "to": "q_seek1", "write": "X", "move": "R"},
 
     {"from": "q_seek0", "read": "0", "to": "q_seek0",  "write": "0", "move": "R"},
     {"from": "q_seek0", "read": "1", "to": "q_seek0",  "write": "1", "move": "R"},
@@ -33,13 +33,13 @@
     {"from": "q_seek1", "read": "X", "to": "q_seek1",  "write": "X", "move": "R"},
     {"from": "q_seek1", "read": "_", "to": "q_found1", "write": "_", "move": "L"},
 
+    {"from": "q_found0", "read": "X", "to": "q_found0", "write": "X", "move": "L"},
     {"from": "q_found0", "read": "0", "to": "q_back",   "write": "X", "move": "L"},
     {"from": "q_found0", "read": "1", "to": "qreject",  "write": "1", "move": "S"},
-    {"from": "q_found0", "read": "X", "to": "q_back",   "write": "X", "move": "L"},
 
+    {"from": "q_found1", "read": "X", "to": "q_found1", "write": "X", "move": "L"},
     {"from": "q_found1", "read": "1", "to": "q_back",   "write": "X", "move": "L"},
     {"from": "q_found1", "read": "0", "to": "qreject",  "write": "0", "move": "S"},
-    {"from": "q_found1", "read": "X", "to": "q_back",   "write": "X", "move": "L"},
 
     {"from": "q_back", "read": "0", "to": "q_back", "write": "0", "move": "L"},
     {"from": "q_back", "read": "1", "to": "q_back", "write": "1", "move": "L"},
