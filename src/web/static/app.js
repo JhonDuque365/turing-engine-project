@@ -38,8 +38,6 @@ function selectMachine(file) {
 function importMachine(event) {
   const file = event.target.files[0];
   if (!file) return;
-
-  // Limpiar el input para que el mismo archivo pueda reimportarse
   event.target.value = '';
 
   const reader = new FileReader();
@@ -47,7 +45,6 @@ function importMachine(event) {
     const content  = e.target.result;
     const filename = file.name;
 
-    // Pre-validación en frontend: JSON sintaxis
     let parsed;
     try {
       parsed = JSON.parse(content);
@@ -62,7 +59,6 @@ function importMachine(event) {
       return;
     }
 
-    // Enviar al servidor para validación formal
     fetch('/api/import', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -71,27 +67,20 @@ function importMachine(event) {
     .then(r => r.json())
     .then(data => {
       if (!data.ok) {
-        // Construir modal de error detallado
         let body = `<p>El archivo <strong>${filename}</strong> no pasó la validación formal.</p>`;
-
         if (data.details && data.details.length > 0) {
           body += `<div class="modal-section-title">❌ Errores encontrados (${data.details.length})</div>`;
-          data.details.forEach(d => {
-            body += `<div class="modal-error-item">${d}</div>`;
-          });
+          data.details.forEach(d => { body += `<div class="modal-error-item">${d}</div>`; });
         }
         if (data.warnings && data.warnings.length > 0) {
           body += `<div class="modal-section-title">⚠️ Advertencias</div>`;
-          data.warnings.forEach(w => {
-            body += `<div class="modal-warning-item">${w}</div>`;
-          });
+          data.warnings.forEach(w => { body += `<div class="modal-warning-item">${w}</div>`; });
         }
         body += `<p style="margin-top:12px;font-size:0.82rem;color:#555">Corrige los errores y vuelve a importar el archivo.</p>`;
         showModal('error', '❌ Validación fallida', body);
         return;
       }
 
-      // Éxito: construir modal de confirmación
       let body = `<p>La máquina fue validada y guardada correctamente.</p>
         <div class="modal-success-info">
           <div class="modal-info-chip"><b>Nombre:</b> ${data.name}</div>
@@ -100,17 +89,11 @@ function importMachine(event) {
           <div class="modal-info-chip"><b>Transiciones:</b> ${data.transitions_count}</div>
           <div class="modal-info-chip"><b>Archivo:</b> ${data.filename}</div>
         </div>`;
-
       if (data.warnings && data.warnings.length > 0) {
         body += `<div class="modal-section-title">⚠️ Avisos</div>`;
-        data.warnings.forEach(w => {
-          body += `<div class="modal-warning-item">${w}</div>`;
-        });
+        data.warnings.forEach(w => { body += `<div class="modal-warning-item">${w}</div>`; });
       }
-
       showModal('success', '✅ Máquina importada', body);
-
-      // Agregar botón a la lista y seleccionarla automáticamente
       addMachineButton(data.filename, true);
       selectedFile = data.filename;
       selectMachine(data.filename);
@@ -122,7 +105,6 @@ function importMachine(event) {
 
 function addMachineButton(filename, imported = false) {
   const list = document.getElementById('machine-list');
-  // Evitar duplicados
   if (document.querySelector(`[data-file="${filename}"]`)) return;
   const btn = document.createElement('button');
   btn.className = 'machine-btn' + (imported ? ' imported' : '');
@@ -136,14 +118,13 @@ function addMachineButton(filename, imported = false) {
 // MODAL
 // ================================================================
 function showModal(type, title, bodyHtml) {
-  const modal  = document.getElementById('import-modal');
-  const header = document.getElementById('modal-header');
-  const icon   = document.getElementById('modal-icon');
-  const titleEl= document.getElementById('modal-title');
-  const body   = document.getElementById('modal-body');
-
-  header.className = `modal-header ${type}`;
-  icon.textContent  = type === 'success' ? '✅' : type === 'warning' ? '⚠️' : '❌';
+  const modal   = document.getElementById('import-modal');
+  const header  = document.getElementById('modal-header');
+  const icon    = document.getElementById('modal-icon');
+  const titleEl = document.getElementById('modal-title');
+  const body    = document.getElementById('modal-body');
+  header.className    = `modal-header ${type}`;
+  icon.textContent    = type === 'success' ? '✅' : type === 'warning' ? '⚠️' : '❌';
   titleEl.textContent = title;
   body.innerHTML = bodyHtml;
   modal.style.display = 'flex';
@@ -153,7 +134,6 @@ function closeModal() {
   document.getElementById('import-modal').style.display = 'none';
 }
 
-// Cerrar modal al clic en el fondo
 document.addEventListener('DOMContentLoaded', () => {
   document.getElementById('import-modal').addEventListener('click', function(e) {
     if (e.target === this) closeModal();
@@ -263,27 +243,57 @@ function doReset() {
   .catch(err => showModal('error', '❌ Error', `<p>${err.toString()}</p>`));
 }
 
-// ---- Suite de pruebas --------------------------------------------------
+// ================================================================
+// SUITE DE PRUEBAS  — sin redundancia, colores correctos
+// ================================================================
 function runTests() {
   fetch('/api/tests', { method: 'POST' })
   .then(r => r.json())
   .then(data => {
     if (data.error) { showModal('error', '❌ Error', `<p>${data.error}</p>`); return; }
     const container = document.getElementById('tests-content');
-    let html = `<div class="tests-summary">${data.passed}/${data.total} pruebas pasadas</div>`;
+
+    const passedCount = data.results.filter(r => r.passed).length;
+    let html = `<div class="tests-summary">${passedCount}/${data.total} pruebas pasadas</div>`;
+
     data.results.forEach(r => {
-      const cls  = r.passed ? 'pass' : 'fail';
-      const icon = r.passed ? '✅' : '❌';
-      const inp  = r.input === "''" ? 'ε (vacía)' : r.input;
+      /*
+       * Lógica de color:
+       *   - Verde (pass): r.passed === true  → la máquina produjo exactamente r.expected
+       *   - Rojo  (fail): r.passed === false → el resultado real difiere del esperado
+       *
+       * Lógica de texto:
+       *   - Si PASA: mostramos solo el resultado (ej. "→ accept")
+       *   - Si FALLA: mostramos esperado VS obtenido (ej. "→ accept  obtuvo: reject")
+       *     para que sea didácticamente claro qué salió mal.
+       */
+      const passed = r.passed === true;  // normalizar por si llega como string
+      const cls    = passed ? 'pass' : 'fail';
+      const icon   = passed ? '✅' : '❌';
+      const inp    = (r.input === '' || r.input === "''") ? 'ε (vacía)' : `'${r.input}'`;
+
+      // Etiqueta de resultado: solo el valor real (accept / reject)
+      // Si pasó:  verde  → "accept"  o  "reject"
+      // Si falló: rojo   → "esperado: accept  obtuvo: reject"
+      let resultLabel;
+      if (passed) {
+        resultLabel = `<span class="test-actual">${r.actual}</span>`;
+      } else {
+        resultLabel = `<span class="test-expected">esperado: ${r.expected}</span>
+                       <span class="test-actual" style="color:#c0392b">obtuvo: ${r.actual}</span>`;
+      }
+
       html += `<div class="test-row ${cls}">
         <span class="test-icon">${icon}</span>
         <span class="test-input">${inp}</span>
-        <span class="test-expected">→ ${r.expected}</span>
-        <span class="test-actual">${r.actual}</span>
+        <span class="test-arrow">→</span>
+        ${resultLabel}
       </div>`;
     });
+
     container.innerHTML = html;
-  });
+  })
+  .catch(err => showModal('error', '❌ Error', `<p>${err.toString()}</p>`));
 }
 
 // ---- Helpers de UI -----------------------------------------------------
@@ -322,9 +332,9 @@ function showResult(result) {
   const badge = document.getElementById('result-badge');
   badge.style.display = 'block';
   badge.className = 'result-badge';
-  if (result === 'accept')  { badge.classList.add('accept');  badge.textContent = '✓ ACCEPT'; }
-  else if (result === 'reject') { badge.classList.add('reject');  badge.textContent = '✗ REJECT'; }
-  else { badge.classList.add('timeout'); badge.textContent = '⏱ TIMEOUT'; }
+  if (result === 'accept')       { badge.classList.add('accept');  badge.textContent = '✓ ACCEPT'; }
+  else if (result === 'reject')  { badge.classList.add('reject');  badge.textContent = '✗ REJECT'; }
+  else                           { badge.classList.add('timeout'); badge.textContent = '⏱ TIMEOUT'; }
 }
 
 function resetResultBadge() {
@@ -335,10 +345,13 @@ function resetResultBadge() {
 function showMetrics(m) {
   if (!m) return;
   const entries = [
-    ['Resultado', m.resultado], ['Pasos', m.pasos_ejecutados],
-    ['Celdas visitadas', m.celdas_visitadas], ['Mov. derecha', m.movimientos_derecha],
-    ['Mov. izquierda', m.movimientos_izquierda], ['Celdas no blancas', m.celdas_no_blancas],
-    ['Cinta final', m.cinta_final],
+    ['Resultado',        m.resultado],
+    ['Pasos',            m.pasos_ejecutados],
+    ['Celdas visitadas', m.celdas_visitadas],
+    ['Mov. derecha',     m.movimientos_derecha],
+    ['Mov. izquierda',   m.movimientos_izquierda],
+    ['Celdas no blancas',m.celdas_no_blancas],
+    ['Cinta final',      m.cinta_final],
   ];
   document.getElementById('metrics-content').innerHTML =
     `<div class="metrics-grid">${entries.map(([k,v]) =>
