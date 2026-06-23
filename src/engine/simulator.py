@@ -21,27 +21,23 @@ class TuringMachineEngine:
         self.machine = TuringMachine(spec)
         self._initialized = False
 
-        # Estado de ejecución
         self.tape: Tape = None
         self.head: int = 0
         self.state: str = ''
         self.step_count: int = 0
         self.trace: list[Configuration] = []
 
-        # Métricas
         self._left_moves: int = 0
         self._right_moves: int = 0
         self._result: str = ''
 
     @classmethod
     def from_file(cls, filepath: str) -> 'TuringMachineEngine':
-        """Carga un motor desde un archivo JSON."""
         with open(filepath, 'r', encoding='utf-8') as f:
             spec = json.load(f)
         return cls(spec)
 
     def initialize(self, input_string: str) -> None:
-        """Inicializa la cinta y el estado para una nueva ejecución."""
         Validator.validate_input(input_string, self.machine.input_alphabet)
         self.tape = Tape(blank=self.machine.blank)
         self.tape.write_input(input_string)
@@ -54,7 +50,6 @@ class TuringMachineEngine:
         self._result = ''
         self._initialized = True
 
-        # Guardar configuración inicial
         self.trace.append(Configuration(
             step=0,
             state=self.state,
@@ -65,10 +60,6 @@ class TuringMachineEngine:
         ))
 
     def step(self) -> str:
-        """
-        Ejecuta una sola transición.
-        Retorna: 'accept', 'reject' o 'running'.
-        """
         if not self._initialized:
             raise RuntimeError("Llama a initialize() antes de step()")
 
@@ -83,14 +74,11 @@ class TuringMachineEngine:
         transition = self.machine.get_transition(self.state, symbol)
 
         if transition is None:
-            # No hay transición definida: rechazar implícitamente
             self.state = self.machine.reject
             self._result = 'reject'
             return 'reject'
 
-        # Aplicar la transición
         self.tape.write(self.head, transition.write)
-        prev_state = self.state
         self.state = transition.to_state
 
         if transition.move == 'R':
@@ -99,11 +87,9 @@ class TuringMachineEngine:
         elif transition.move == 'L':
             self.head -= 1
             self._left_moves += 1
-        # 'S' -> el cabezal no se mueve
 
         self.step_count += 1
 
-        # Registrar la configuración
         self.trace.append(Configuration(
             step=self.step_count,
             state=self.state,
@@ -123,23 +109,16 @@ class TuringMachineEngine:
         return 'running'
 
     def run(self, max_steps: int = 10000) -> str:
-        """
-        Ejecuta la máquina hasta detenerse o alcanzar el límite de pasos.
-        IMPORTANTE: 'timeout_without_conclusion' NO equivale a rechazo.
-        """
         if not self._initialized:
             raise RuntimeError("Llama a initialize() antes de run()")
-
         while self.step_count < max_steps:
             status = self.step()
             if status in ('accept', 'reject'):
                 return status
-
         self._result = 'timeout_without_conclusion'
         return 'timeout_without_conclusion'
 
     def get_metrics(self) -> dict:
-        """Retorna las métricas de la ejecución actual."""
         return {
             'resultado': self._result,
             'pasos_ejecutados': self.step_count,
@@ -152,7 +131,6 @@ class TuringMachineEngine:
         }
 
     def print_trace(self, max_steps: int = None) -> None:
-        """Imprime la traza de ejecución."""
         steps = self.trace if max_steps is None else self.trace[:max_steps + 1]
         print(f"\n{'='*70}")
         print(f"  TRAZA DE EJECUCIÓN - Máquina: {self.machine.name}")
@@ -165,21 +143,20 @@ class TuringMachineEngine:
         print(f"{'='*70}\n")
 
     def run_test_suite(self) -> list[dict]:
-        """Ejecuta todos los casos de prueba definidos en la especificación JSON."""
+        """Ejecuta todos los casos de prueba. Devuelve input como string limpio (sin repr)."""
         results = []
         for test in self.machine.tests:
-            input_str = test['input']
-            expected = test['expected']
+            input_str = test['input']      # string limpio: '', 'ab', 'aabb', ...
+            expected  = test['expected']
             try:
                 self.initialize(input_str)
                 actual = self.run(max_steps=10000)
             except Exception as e:
                 actual = f'error: {e}'
-            passed = actual == expected
             results.append({
-                'input': repr(input_str),
+                'input':    input_str,     # sin repr() — el frontend maneja el display
                 'expected': expected,
-                'actual': actual,
-                'passed': passed
+                'actual':   actual,
+                'passed':   actual == expected
             })
         return results

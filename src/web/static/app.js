@@ -39,26 +39,20 @@ function importMachine(event) {
   const file = event.target.files[0];
   if (!file) return;
   event.target.value = '';
-
   const reader = new FileReader();
   reader.onload = function(e) {
     const content  = e.target.result;
     const filename = file.name;
-
     let parsed;
     try {
       parsed = JSON.parse(content);
     } catch(err) {
-      showModal('error',
-        '❌ Error de sintaxis JSON',
+      showModal('error', '❌ Error de sintaxis JSON',
         `<p>El archivo <strong>${filename}</strong> no es un JSON válido.</p>
          <div class="modal-section-title">Detalle del error</div>
-         <div class="modal-error-item">${err.message}</div>
-         <p style="margin-top:10px;font-size:0.82rem;color:#555">Verifica que el archivo tenga llaves, corchetes y comas correctamente colocados.</p>`
-      );
+         <div class="modal-error-item">${err.message}</div>`);
       return;
     }
-
     fetch('/api/import', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -69,25 +63,22 @@ function importMachine(event) {
       if (!data.ok) {
         let body = `<p>El archivo <strong>${filename}</strong> no pasó la validación formal.</p>`;
         if (data.details && data.details.length > 0) {
-          body += `<div class="modal-section-title">❌ Errores encontrados (${data.details.length})</div>`;
+          body += `<div class="modal-section-title">❌ Errores (${data.details.length})</div>`;
           data.details.forEach(d => { body += `<div class="modal-error-item">${d}</div>`; });
         }
         if (data.warnings && data.warnings.length > 0) {
           body += `<div class="modal-section-title">⚠️ Advertencias</div>`;
           data.warnings.forEach(w => { body += `<div class="modal-warning-item">${w}</div>`; });
         }
-        body += `<p style="margin-top:12px;font-size:0.82rem;color:#555">Corrige los errores y vuelve a importar el archivo.</p>`;
         showModal('error', '❌ Validación fallida', body);
         return;
       }
-
-      let body = `<p>La máquina fue validada y guardada correctamente.</p>
+      let body = `<p>Máquina validada y guardada.</p>
         <div class="modal-success-info">
           <div class="modal-info-chip"><b>Nombre:</b> ${data.name}</div>
           <div class="modal-info-chip"><b>Modo:</b> ${data.mode}</div>
           <div class="modal-info-chip"><b>Estados:</b> ${data.states_count}</div>
           <div class="modal-info-chip"><b>Transiciones:</b> ${data.transitions_count}</div>
-          <div class="modal-info-chip"><b>Archivo:</b> ${data.filename}</div>
         </div>`;
       if (data.warnings && data.warnings.length > 0) {
         body += `<div class="modal-section-title">⚠️ Avisos</div>`;
@@ -129,11 +120,9 @@ function showModal(type, title, bodyHtml) {
   body.innerHTML = bodyHtml;
   modal.style.display = 'flex';
 }
-
 function closeModal() {
   document.getElementById('import-modal').style.display = 'none';
 }
-
 document.addEventListener('DOMContentLoaded', () => {
   document.getElementById('import-modal').addEventListener('click', function(e) {
     if (e.target === this) closeModal();
@@ -144,9 +133,7 @@ document.addEventListener('DOMContentLoaded', () => {
 function loadAndInit() {
   if (!selectedFile) { alert('Selecciona una máquina primero.'); return; }
   const input = document.getElementById('input-string').value;
-  clearTrace();
-  resetResultBadge();
-
+  clearTrace(); resetResultBadge();
   fetch('/api/load', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
@@ -157,10 +144,8 @@ function loadAndInit() {
     if (data.error) { showModal('error', '❌ Error al cargar', `<p>${data.error}</p>`); return; }
     updateState(data.current.state, null, data.machine);
     updateTape(data.current.tape);
-    setStepCount(0);
-    setTransition('(inicio)');
-    buildDeltaTable(data.transitions);
-    setButtons(true);
+    setStepCount(0); setTransition('(inicio)');
+    buildDeltaTable(data.transitions); setButtons(true);
     addTraceRow(0, data.current.state, data.current.head_symbol, '(inicio)');
     document.getElementById('tests-card').style.display = 'block';
     document.getElementById('metrics-card').style.display = 'none';
@@ -177,13 +162,10 @@ function doStep() {
     if (data.error) { showModal('error', '❌ Error', `<p>${data.error}</p>`); return; }
     const cfg = data.current;
     updateState(cfg.state, data.status, null);
-    updateTape(cfg.tape);
-    setStepCount(data.step_count);
-    setTransition(cfg.transition);
+    updateTape(cfg.tape); setStepCount(data.step_count); setTransition(cfg.transition);
     addTraceRow(cfg.step, cfg.state, cfg.head_symbol, cfg.transition);
     if (data.done) {
-      showResult(data.status);
-      showMetrics(data.metrics);
+      showResult(data.status); showMetrics(data.metrics);
       document.getElementById('btn-step').disabled = true;
       document.getElementById('btn-run').disabled  = true;
     }
@@ -206,13 +188,10 @@ function doRun() {
     isRunning = false;
     if (data.error) { showModal('error', '❌ Error', `<p>${data.error}</p>`); return; }
     updateState(data.current.state, data.result, null);
-    updateTape(data.tape);
-    setStepCount(data.step_count);
-    setTransition(data.current.transition);
+    updateTape(data.tape); setStepCount(data.step_count); setTransition(data.current.transition);
     clearTrace();
     data.trace.forEach(c => addTraceRow(c.step, c.state, c.head_symbol, c.transition));
-    showResult(data.result);
-    showMetrics(data.metrics);
+    showResult(data.result); showMetrics(data.metrics);
     document.getElementById('btn-step').disabled = true;
     document.getElementById('btn-run').disabled  = true;
   })
@@ -222,8 +201,7 @@ function doRun() {
 // ---- Reiniciar ---------------------------------------------------------
 function doReset() {
   const input = document.getElementById('input-string').value;
-  clearTrace();
-  resetResultBadge();
+  clearTrace(); resetResultBadge();
   fetch('/api/reset', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
@@ -232,11 +210,8 @@ function doReset() {
   .then(r => r.json())
   .then(data => {
     if (data.error) { showModal('error', '❌ Error', `<p>${data.error}</p>`); return; }
-    updateState(data.current.state, null, null);
-    updateTape(data.current.tape);
-    setStepCount(0);
-    setTransition('(inicio)');
-    setButtons(true);
+    updateState(data.current.state, null, null); updateTape(data.current.tape);
+    setStepCount(0); setTransition('(inicio)'); setButtons(true);
     document.getElementById('metrics-card').style.display = 'none';
     addTraceRow(0, data.current.state, data.current.head_symbol, '(inicio)');
   })
@@ -244,7 +219,7 @@ function doReset() {
 }
 
 // ================================================================
-// SUITE DE PRUEBAS  — sin redundancia, colores correctos
+// SUITE DE PRUEBAS  — input limpio, un solo resultado, colores correctos
 // ================================================================
 function runTests() {
   fetch('/api/tests', { method: 'POST' })
@@ -252,41 +227,34 @@ function runTests() {
   .then(data => {
     if (data.error) { showModal('error', '❌ Error', `<p>${data.error}</p>`); return; }
     const container = document.getElementById('tests-content');
-
-    const passedCount = data.results.filter(r => r.passed).length;
+    const passedCount = data.results.filter(r => r.passed === true).length;
     let html = `<div class="tests-summary">${passedCount}/${data.total} pruebas pasadas</div>`;
 
     data.results.forEach(r => {
-      /*
-       * Lógica de color:
-       *   - Verde (pass): r.passed === true  → la máquina produjo exactamente r.expected
-       *   - Rojo  (fail): r.passed === false → el resultado real difiere del esperado
-       *
-       * Lógica de texto:
-       *   - Si PASA: mostramos solo el resultado (ej. "→ accept")
-       *   - Si FALLA: mostramos esperado VS obtenido (ej. "→ accept  obtuvo: reject")
-       *     para que sea didácticamente claro qué salió mal.
-       */
-      const passed = r.passed === true;  // normalizar por si llega como string
+      const passed = r.passed === true;
       const cls    = passed ? 'pass' : 'fail';
       const icon   = passed ? '✅' : '❌';
-      const inp    = (r.input === '' || r.input === "''") ? 'ε (vacía)' : `'${r.input}'`;
 
-      // Etiqueta de resultado: solo el valor real (accept / reject)
-      // Si pasó:  verde  → "accept"  o  "reject"
-      // Si falló: rojo   → "esperado: accept  obtuvo: reject"
+      // Input display: cadena vacía → "ε (vacía)", resto → entre comillas simples
+      const raw = String(r.input);                         // ya viene limpio del servidor
+      const inp = raw === '' ? 'ε (vacía)' : `'${raw}'`;
+
+      // Resultado: si pasa solo muestra el valor; si falla muestra esperado vs obtenido
       let resultLabel;
       if (passed) {
-        resultLabel = `<span class="test-actual">${r.actual}</span>`;
+        // Verde: solo el resultado real
+        const color = r.actual === 'accept' ? '#1a7f4b' : '#c0392b';
+        resultLabel = `<span class="test-actual" style="color:${color};font-weight:700">${r.actual}</span>`;
       } else {
-        resultLabel = `<span class="test-expected">esperado: ${r.expected}</span>
-                       <span class="test-actual" style="color:#c0392b">obtuvo: ${r.actual}</span>`;
+        // Rojo: muestra qué se esperaba y qué salió
+        resultLabel = `<span class="test-expected" style="color:#555">esperado: <strong>${r.expected}</strong></span>
+                       <span class="test-actual" style="color:#c0392b;font-weight:700;margin-left:6px">obtuvo: ${r.actual}</span>`;
       }
 
       html += `<div class="test-row ${cls}">
         <span class="test-icon">${icon}</span>
         <span class="test-input">${inp}</span>
-        <span class="test-arrow">→</span>
+        <span style="margin:0 4px;color:#888">→</span>
         ${resultLabel}
       </div>`;
     });
@@ -332,26 +300,23 @@ function showResult(result) {
   const badge = document.getElementById('result-badge');
   badge.style.display = 'block';
   badge.className = 'result-badge';
-  if (result === 'accept')       { badge.classList.add('accept');  badge.textContent = '✓ ACCEPT'; }
-  else if (result === 'reject')  { badge.classList.add('reject');  badge.textContent = '✗ REJECT'; }
-  else                           { badge.classList.add('timeout'); badge.textContent = '⏱ TIMEOUT'; }
+  if (result === 'accept')      { badge.classList.add('accept');  badge.textContent = '✓ ACCEPT'; }
+  else if (result === 'reject') { badge.classList.add('reject');  badge.textContent = '✗ REJECT'; }
+  else                          { badge.classList.add('timeout'); badge.textContent = '⏱ TIMEOUT'; }
 }
 
 function resetResultBadge() {
-  const badge = document.getElementById('result-badge');
-  badge.style.display = 'none'; badge.className = 'result-badge'; badge.textContent = '';
+  const b = document.getElementById('result-badge');
+  b.style.display = 'none'; b.className = 'result-badge'; b.textContent = '';
 }
 
 function showMetrics(m) {
   if (!m) return;
   const entries = [
-    ['Resultado',        m.resultado],
-    ['Pasos',            m.pasos_ejecutados],
-    ['Celdas visitadas', m.celdas_visitadas],
-    ['Mov. derecha',     m.movimientos_derecha],
-    ['Mov. izquierda',   m.movimientos_izquierda],
-    ['Celdas no blancas',m.celdas_no_blancas],
-    ['Cinta final',      m.cinta_final],
+    ['Resultado', m.resultado], ['Pasos', m.pasos_ejecutados],
+    ['Celdas visitadas', m.celdas_visitadas], ['Mov. derecha', m.movimientos_derecha],
+    ['Mov. izquierda', m.movimientos_izquierda], ['Celdas no blancas', m.celdas_no_blancas],
+    ['Cinta final', m.cinta_final],
   ];
   document.getElementById('metrics-content').innerHTML =
     `<div class="metrics-grid">${entries.map(([k,v]) =>
