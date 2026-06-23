@@ -1,0 +1,3 @@
+# No se requieren dependencias externas para el motor base
+# Dependencias opcionales para la interfaz web
+colorama>=0.4.6

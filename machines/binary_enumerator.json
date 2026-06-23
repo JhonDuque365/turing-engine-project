@@ -1,0 +1,23 @@
+{
+  "name": "binary_enumerator",
+  "mode": "enumerator",
+  "description": "Enumerador de cadenas binarias en orden por longitud. Implementado como módulo Python (ver src/engine/enumerator.py).",
+  "states": ["q0", "qaccept", "qreject"],
+  "input_alphabet": ["0", "1"],
+  "tape_alphabet": ["0", "1", "_"],
+  "blank": "_",
+  "start": "q0",
+  "accept": "qaccept",
+  "reject": "qreject",
+  "transitions": [
+    {"from": "q0", "read": "0", "to": "qaccept", "write": "0", "move": "S"},
+    {"from": "q0", "read": "1", "to": "qaccept", "write": "1", "move": "S"},
+    {"from": "q0", "read": "_", "to": "qaccept", "write": "_", "move": "S"}
+  ],
+  "tests": [
+    {"input": "0",  "expected": "accept"},
+    {"input": "1",  "expected": "accept"},
+    {"input": "00", "expected": "accept"}
+  ],
+  "enumerator_note": "Para ejecutar el enumerador de cadenas binarias, usar: python -c 'from src.engine.enumerator import BinaryEnumerator; BinaryEnumerator.enumerate(10)'"
+}
