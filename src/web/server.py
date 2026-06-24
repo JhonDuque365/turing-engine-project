@@ -10,7 +10,7 @@ Uso:
 import os
 import sys
 import json
-from flask import Flask, render_template, request, jsonify
+from flask import Flask, render_template, request, jsonify, send_from_directory
 
 ROOT = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 SRC  = os.path.join(ROOT, 'src')
@@ -23,12 +23,13 @@ app = Flask(__name__, template_folder='templates', static_folder='static')
 app.secret_key = 'turing-motor-2026-unipamplona'
 
 MACHINES_DIR = os.path.join(ROOT, 'machines')
+DOCS_DIR     = os.path.join(ROOT, 'docs')
 
 _engine: TuringMachineEngine = None
 _machine_name: str = ''
 
 
-# ── Utilidades ────────────────────────────────────────────────────────────────
+# ── Utilidades ─────────────────────────────────────────────────────────────────────────────
 
 def list_machines():
     return sorted([f for f in os.listdir(MACHINES_DIR) if f.endswith('.json')])
@@ -58,12 +59,18 @@ def config_to_dict(config, tape_cells=None):
     }
 
 
-# ── Rutas principales ─────────────────────────────────────────────────────────
+# ── Rutas principales ────────────────────────────────────────────────────────────────
 
 @app.route('/')
 def index():
     machines = list_machines()
     return render_template('index.html', machines=machines)
+
+
+@app.route('/docs/<path:filename>')
+def serve_docs(filename):
+    """Sirve archivos estáticos desde la carpeta /docs del proyecto."""
+    return send_from_directory(DOCS_DIR, filename)
 
 
 @app.route('/api/machines', methods=['GET'])
