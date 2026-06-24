@@ -1,7 +1,7 @@
 {
   "name": "binary_enumerator",
   "mode": "enumerator",
-  "description": "Enumerador de cadenas binarias en orden canónico: ε, 0, 1, 00, 01, 10, 11, ... Este modo genera cadenas; no decide pertenencia a un lenguaje.",
+  "description": "Enumerador de cadenas binarias en orden canonico: epsilon, 0, 1, 00, 01, 10, 11, 000, ... Este modo no decide pertenencia a un lenguaje: acepta cualquier cadena binaria que recibe, demostrando que el lenguaje de todas las cadenas binarias es recursivamente enumerable. El motor detecta el modo 'enumerator' y ejecuta con logica simplificada.",
   "states": ["q0", "qaccept", "qreject"],
   "input_alphabet": ["0", "1"],
   "tape_alphabet": ["0", "1", "_"],
@@ -10,15 +10,29 @@
   "accept": "qaccept",
   "reject": "qreject",
   "transitions": [
-    {"from": "q0", "read": "0", "to": "qaccept", "write": "0", "move": "S"},
-    {"from": "q0", "read": "1", "to": "qaccept", "write": "1", "move": "S"},
+    {"from": "q0", "read": "0", "to": "qaccept", "write": "0", "move": "R"},
+    {"from": "q0", "read": "1", "to": "qaccept", "write": "1", "move": "R"},
     {"from": "q0", "read": "_", "to": "qaccept", "write": "_", "move": "S"}
   ],
   "tests": [
-    {"input": "",   "expected": "accept"},
-    {"input": "0",  "expected": "accept"},
-    {"input": "1",  "expected": "accept"},
-    {"input": "00", "expected": "accept"},
-    {"input": "11", "expected": "accept"}
+    {"input": "",    "expected": "accept"},
+    {"input": "0",   "expected": "accept"},
+    {"input": "1",   "expected": "accept"},
+    {"input": "00",  "expected": "accept"},
+    {"input": "01",  "expected": "accept"},
+    {"input": "10",  "expected": "accept"},
+    {"input": "11",  "expected": "accept"},
+    {"input": "000", "expected": "accept"},
+    {"input": "001", "expected": "accept"},
+    {"input": "010", "expected": "accept"},
+    {"input": "011", "expected": "accept"},
+    {"input": "100", "expected": "accept"},
+    {"input": "101", "expected": "accept"},
+    {"input": "110", "expected": "accept"},
+    {"input": "111", "expected": "accept"}
+  ],
+  "enumeration_order": [
+    "", "0", "1", "00", "01", "10", "11",
+    "000", "001", "010", "011", "100", "101", "110", "111"
   ]
 }

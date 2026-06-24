@@ -1,7 +1,7 @@
 {
   "name": "palindrome_decider",
   "mode": "decider",
-  "description": "Decide PAL = { w | w = w^R } sobre {0,1}. Marca y compara extremos iterativamente.",
+  "description": "Decide PAL = { w | w = w^R } sobre {0,1}. Marca y compara extremos iterativamente: toma el simbolo mas a la izquierda, lo memoriza en el estado, viaja al extremo derecho y verifica que coincida. Si al llegar al extremo solo quedan X o blanco, acepta.",
   "states": [
     "q0",
     "q_seek0", "q_seek1",
@@ -17,38 +17,78 @@
   "accept": "qaccept",
   "reject": "qreject",
   "transitions": [
-    {"from": "q0",       "read": "_", "to": "qaccept",  "write": "_", "move": "S"},
-    {"from": "q0",       "read": "X", "to": "q_check",  "write": "X", "move": "R"},
-    {"from": "q0",       "read": "0", "to": "q_seek0",  "write": "X", "move": "R"},
-    {"from": "q0",       "read": "1", "to": "q_seek1",  "write": "X", "move": "R"},
-    {"from": "q_seek0",  "read": "0", "to": "q_seek0",  "write": "0", "move": "R"},
-    {"from": "q_seek0",  "read": "1", "to": "q_seek0",  "write": "1", "move": "R"},
-    {"from": "q_seek0",  "read": "X", "to": "q_seek0",  "write": "X", "move": "R"},
-    {"from": "q_seek0",  "read": "_", "to": "q_found0", "write": "_", "move": "L"},
-    {"from": "q_seek1",  "read": "0", "to": "q_seek1",  "write": "0", "move": "R"},
-    {"from": "q_seek1",  "read": "1", "to": "q_seek1",  "write": "1", "move": "R"},
-    {"from": "q_seek1",  "read": "X", "to": "q_seek1",  "write": "X", "move": "R"},
-    {"from": "q_seek1",  "read": "_", "to": "q_found1", "write": "_", "move": "L"},
-    {"from": "q_found0", "read": "X", "to": "q_found0", "write": "X", "move": "L"},
+
+    // --- q0: lee el simbolo mas a la izquierda no marcado ---
+    // Cadena vacia o solo X: aceptar directamente
+    {"from": "q0", "read": "_", "to": "qaccept",  "write": "_", "move": "S"},
+    // Solo quedan X (todos marcados): pasar a verificacion final
+    {"from": "q0", "read": "X", "to": "q_check",  "write": "X", "move": "R"},
+    // Lee 0: lo tacha con X y va a buscar el extremo derecho recordando '0'
+    {"from": "q0", "read": "0", "to": "q_seek0",  "write": "X", "move": "R"},
+    // Lee 1: lo tacha con X y va a buscar el extremo derecho recordando '1'
+    {"from": "q0", "read": "1", "to": "q_seek1",  "write": "X", "move": "R"},
+
+    // --- q_seek0: viaja hacia la derecha buscando el extremo (recuerda 0) ---
+    {"from": "q_seek0", "read": "0", "to": "q_seek0",  "write": "0", "move": "R"},
+    {"from": "q_seek0", "read": "1", "to": "q_seek0",  "write": "1", "move": "R"},
+    {"from": "q_seek0", "read": "X", "to": "q_seek0",  "write": "X", "move": "R"},
+    // Llego al blanco: retrocede un paso para quedar sobre el ultimo simbolo real
+    {"from": "q_seek0", "read": "_", "to": "q_found0", "write": "_", "move": "L"},
+
+    // --- q_seek1: viaja hacia la derecha buscando el extremo (recuerda 1) ---
+    {"from": "q_seek1", "read": "0", "to": "q_seek1",  "write": "0", "move": "R"},
+    {"from": "q_seek1", "read": "1", "to": "q_seek1",  "write": "1", "move": "R"},
+    {"from": "q_seek1", "read": "X", "to": "q_seek1",  "write": "X", "move": "R"},
+    // Llego al blanco: retrocede un paso
+    {"from": "q_seek1", "read": "_", "to": "q_found1", "write": "_", "move": "L"},
+
+    // --- q_found0: llego al extremo derecho, esperaba encontrar '0' ---
+    // El extremo derecho es X: palindromo de longitud impar, simbolo central ya marcado -> aceptar
+    {"from": "q_found0", "read": "X", "to": "qaccept",  "write": "X", "move": "S"},
+    // El extremo derecho es blanco: cadena de 1 simbolo (ya marcado izq) -> aceptar
     {"from": "q_found0", "read": "_", "to": "qaccept",  "write": "_", "move": "S"},
+    // El extremo derecho es 0: coincide con lo recordado -> tachar y regresar
     {"from": "q_found0", "read": "0", "to": "q_back",   "write": "X", "move": "L"},
+    // El extremo derecho es 1: NO coincide -> rechazar
     {"from": "q_found0", "read": "1", "to": "qreject",  "write": "1", "move": "S"},
-    {"from": "q_found1", "read": "X", "to": "q_found1", "write": "X", "move": "L"},
+
+    // --- q_found1: llego al extremo derecho, esperaba encontrar '1' ---
+    // El extremo derecho es X: palindromo de longitud impar -> aceptar
+    {"from": "q_found1", "read": "X", "to": "qaccept",  "write": "X", "move": "S"},
+    // El extremo derecho es blanco: cadena de 1 simbolo -> aceptar
     {"from": "q_found1", "read": "_", "to": "qaccept",  "write": "_", "move": "S"},
+    // El extremo derecho es 1: coincide -> tachar y regresar
     {"from": "q_found1", "read": "1", "to": "q_back",   "write": "X", "move": "L"},
+    // El extremo derecho es 0: NO coincide -> rechazar
     {"from": "q_found1", "read": "0", "to": "qreject",  "write": "0", "move": "S"},
-    {"from": "q_back",   "read": "0", "to": "q_back",   "write": "0", "move": "L"},
-    {"from": "q_back",   "read": "1", "to": "q_back",   "write": "1", "move": "L"},
-    {"from": "q_back",   "read": "X", "to": "q_back",   "write": "X", "move": "L"},
-    {"from": "q_back",   "read": "_", "to": "q0",       "write": "_", "move": "R"},
-    {"from": "q_check",  "read": "X", "to": "q_check",  "write": "X", "move": "R"},
-    {"from": "q_check",  "read": "_", "to": "qaccept",  "write": "_", "move": "S"}
+
+    // --- q_back: regresa al inicio moviendose a la izquierda ---
+    {"from": "q_back", "read": "0", "to": "q_back", "write": "0", "move": "L"},
+    {"from": "q_back", "read": "1", "to": "q_back", "write": "1", "move": "L"},
+    {"from": "q_back", "read": "X", "to": "q_back", "write": "X", "move": "L"},
+    // Llego al blanco izquierdo: avanzar y reiniciar el ciclo desde q0
+    {"from": "q_back", "read": "_", "to": "q0",     "write": "_", "move": "R"},
+
+    // --- q_check: verificacion final, solo deben quedar X ---
+    {"from": "q_check", "read": "X", "to": "q_check", "write": "X", "move": "R"},
+    // Llego al blanco: todo fue tachado correctamente -> aceptar
+    {"from": "q_check", "read": "_", "to": "qaccept", "write": "_", "move": "S"}
   ],
   "tests": [
-    {"input": "",   "expected": "accept"},
-    {"input": "11", "expected": "accept"},
-    {"input": "00", "expected": "accept"},
-    {"input": "01", "expected": "reject"},
-    {"input": "10", "expected": "reject"}
+    {"input": "",      "expected": "accept"},
+    {"input": "0",     "expected": "accept"},
+    {"input": "1",     "expected": "accept"},
+    {"input": "00",    "expected": "accept"},
+    {"input": "11",    "expected": "accept"},
+    {"input": "010",   "expected": "accept"},
+    {"input": "101",   "expected": "accept"},
+    {"input": "0110",  "expected": "accept"},
+    {"input": "1001",  "expected": "accept"},
+    {"input": "00100", "expected": "accept"},
+    {"input": "01",    "expected": "reject"},
+    {"input": "10",    "expected": "reject"},
+    {"input": "001",   "expected": "reject"},
+    {"input": "0100",  "expected": "reject"},
+    {"input": "1010",  "expected": "reject"}
   ]
 }
