@@ -5,6 +5,100 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Motor de Máquina de Turing – Universidad de Pamplona</title>
   <link rel="stylesheet" href="/static/style.css">
+  <style>
+    /* ── Botón Guía en el header ── */
+    .header-guide-btn {
+      margin-left: auto;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      padding: 8px 18px;
+      background: rgba(255,255,255,0.15);
+      color: #fff;
+      border: 1.5px solid rgba(255,255,255,0.35);
+      border-radius: 999px;
+      font-size: 0.9rem;
+      font-weight: 600;
+      cursor: pointer;
+      transition: background 180ms ease, border-color 180ms ease;
+      text-decoration: none;
+      white-space: nowrap;
+    }
+    .header-guide-btn:hover {
+      background: rgba(255,255,255,0.28);
+      border-color: rgba(255,255,255,0.6);
+    }
+    .header-guide-btn svg {
+      flex-shrink: 0;
+    }
+
+    /* ── Modal de la Guía ── */
+    #guide-modal {
+      display: none;
+      position: fixed;
+      inset: 0;
+      z-index: 9999;
+      background: rgba(0,0,0,0.55);
+      backdrop-filter: blur(4px);
+      align-items: flex-start;
+      justify-content: center;
+      padding: 24px 16px;
+      overflow-y: auto;
+    }
+    #guide-modal.open {
+      display: flex;
+    }
+    .guide-modal-box {
+      background: #fff;
+      border-radius: 14px;
+      width: 100%;
+      max-width: 1020px;
+      min-height: 80vh;
+      box-shadow: 0 20px 60px rgba(0,0,0,0.25);
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+      position: relative;
+    }
+    .guide-modal-topbar {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 14px 20px;
+      border-bottom: 1px solid #e5e3de;
+      background: #f7f6f2;
+      flex-shrink: 0;
+    }
+    .guide-modal-topbar span {
+      font-weight: 700;
+      font-size: 1rem;
+      color: #28251d;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    .guide-modal-close {
+      background: none;
+      border: none;
+      cursor: pointer;
+      color: #7a7974;
+      display: flex;
+      align-items: center;
+      padding: 6px;
+      border-radius: 8px;
+      transition: background 150ms;
+    }
+    .guide-modal-close:hover {
+      background: #ece9e3;
+      color: #28251d;
+    }
+    .guide-modal-iframe {
+      flex: 1;
+      border: none;
+      width: 100%;
+      min-height: 75vh;
+    }
+  </style>
 </head>
 <body>
 
@@ -16,9 +110,43 @@
       <p>Teoría de la Computación &mdash; Universidad de Pamplona &mdash; 2026-1 &mdash; Prof. Omar Portilla Jaimes</p>
     </div>
   </div>
+  <!-- Botón Guía: esquina superior derecha del header -->
+  <button class="header-guide-btn" onclick="openGuide()" title="Ver guía técnica completa">
+    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+      <circle cx="12" cy="12" r="10"/>
+      <path d="M12 16v-4M12 8h.01"/>
+    </svg>
+    Guía
+  </button>
 </header>
 
-<!-- Modal (fuera del app-shell para no verse recortado) -->
+<!-- ═══ MODAL GUÍA TÉCNICA ═══ -->
+<div id="guide-modal" role="dialog" aria-modal="true" aria-label="Guía Técnica" onclick="handleGuideBackdrop(event)">
+  <div class="guide-modal-box">
+    <div class="guide-modal-topbar">
+      <span>
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <circle cx="12" cy="12" r="10"/><path d="M12 16v-4M12 8h.01"/>
+        </svg>
+        Guía Técnica — Motor de Máquinas de Turing
+      </span>
+      <button class="guide-modal-close" onclick="closeGuide()" title="Cerrar guía">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round">
+          <path d="M18 6 6 18M6 6l12 12"/>
+        </svg>
+      </button>
+    </div>
+    <iframe
+      id="guide-iframe"
+      class="guide-modal-iframe"
+      src=""
+      title="Guía Técnica"
+      loading="lazy">
+    </iframe>
+  </div>
+</div>
+
+<!-- Modal de import (existente) -->
 <div id="import-modal" class="modal" style="display:none">
   <div class="modal-box">
     <div class="modal-header" id="modal-header">
@@ -34,7 +162,7 @@
 
 <div class="app-shell">
 
-  <!-- ═══ SIDEBAR ═══════════════════════════════════════════════ -->
+  <!-- ═══ SIDEBAR ═════════════════════════════════════════════ -->
   <aside class="sidebar">
 
     <!-- Selector de máquina -->
@@ -93,7 +221,7 @@
 
   </aside>
 
-  <!-- ═══ PANEL CENTRAL ═════════════════════════════════════════ -->
+  <!-- ═══ PANEL CENTRAL ═════════════════════════════════════════════ -->
   <section class="main-panel">
 
     <!-- Estado actual -->
@@ -168,5 +296,40 @@
 </footer>
 
 <script src="/static/app.js"></script>
+
+<script>
+  /* ── Lógica del modal de la Guía ── */
+
+  // Abre el modal e inyecta el iframe apuntando a la guía en /docs/
+  function openGuide() {
+    const modal  = document.getElementById('guide-modal');
+    const iframe = document.getElementById('guide-iframe');
+    // Carga la guía solo la primera vez (lazy)
+    if (!iframe.src || iframe.src === window.location.href) {
+      iframe.src = '/docs/guia_tecnica.html';
+    }
+    modal.classList.add('open');
+    document.body.style.overflow = 'hidden'; // evita scroll del fondo
+  }
+
+  // Cierra el modal
+  function closeGuide() {
+    document.getElementById('guide-modal').classList.remove('open');
+    document.body.style.overflow = '';
+  }
+
+  // Cierra al hacer clic en el backdrop (fuera del modal-box)
+  function handleGuideBackdrop(e) {
+    if (e.target === document.getElementById('guide-modal')) {
+      closeGuide();
+    }
+  }
+
+  // Cierra con la tecla Escape
+  document.addEventListener('keydown', function(e) {
+    if (e.key === 'Escape') closeGuide();
+  });
+</script>
+
 </body>
 </html>
