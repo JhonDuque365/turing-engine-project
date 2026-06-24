@@ -1,13 +1,12 @@
 {
   "name": "palindrome_decider",
   "mode": "decider",
-  "description": "Decide PAL = { w | w = w^R } sobre {0,1}. Algoritmo: marca el simbolo mas a la izquierda (lo memoriza en el estado), viaja al extremo derecho, verifica que el ultimo simbolo real coincida, lo tacha con X, regresa al inicio y repite. Acepta cuando no quedan simbolos sin marcar.",
+  "description": "Decide PAL = { w | w = w^R } sobre {0,1}. Algoritmo: en cada ciclo, q0 avanza saltando X hasta encontrar el primer simbolo real (0 o 1). Lo memoriza tachandolo con X y va al extremo derecho (q_seek0/q_seek1). Al llegar al blanco retrocede un paso (q_found0/q_found1) y verifica que el ultimo simbolo real coincida: si coincide lo tacha y regresa (q_back); si no coincide rechaza. Cuando q0 llega a blanco sin encontrar simbolo real: acepta.",
   "states": [
     "q0",
     "q_seek0", "q_seek1",
     "q_found0", "q_found1",
     "q_back",
-    "q_check",
     "qaccept", "qreject"
   ],
   "input_alphabet": ["0", "1"],
@@ -18,7 +17,7 @@
   "reject": "qreject",
   "transitions": [
     {"from": "q0", "read": "_", "to": "qaccept", "write": "_", "move": "S"},
-    {"from": "q0", "read": "X", "to": "q_check", "write": "X", "move": "R"},
+    {"from": "q0", "read": "X", "to": "q0",      "write": "X", "move": "R"},
     {"from": "q0", "read": "0", "to": "q_seek0", "write": "X", "move": "R"},
     {"from": "q0", "read": "1", "to": "q_seek1", "write": "X", "move": "R"},
 
@@ -32,12 +31,12 @@
     {"from": "q_seek1", "read": "X", "to": "q_seek1",  "write": "X", "move": "R"},
     {"from": "q_seek1", "read": "_", "to": "q_found1", "write": "_", "move": "L"},
 
-    {"from": "q_found0", "read": "X", "to": "q_back",  "write": "X", "move": "L"},
+    {"from": "q_found0", "read": "X", "to": "qaccept", "write": "X", "move": "S"},
     {"from": "q_found0", "read": "_", "to": "qaccept", "write": "_", "move": "S"},
     {"from": "q_found0", "read": "0", "to": "q_back",  "write": "X", "move": "L"},
     {"from": "q_found0", "read": "1", "to": "qreject", "write": "1", "move": "S"},
 
-    {"from": "q_found1", "read": "X", "to": "q_back",  "write": "X", "move": "L"},
+    {"from": "q_found1", "read": "X", "to": "qaccept", "write": "X", "move": "S"},
     {"from": "q_found1", "read": "_", "to": "qaccept", "write": "_", "move": "S"},
     {"from": "q_found1", "read": "1", "to": "q_back",  "write": "X", "move": "L"},
     {"from": "q_found1", "read": "0", "to": "qreject", "write": "0", "move": "S"},
@@ -45,12 +44,7 @@
     {"from": "q_back", "read": "0", "to": "q_back", "write": "0", "move": "L"},
     {"from": "q_back", "read": "1", "to": "q_back", "write": "1", "move": "L"},
     {"from": "q_back", "read": "X", "to": "q_back", "write": "X", "move": "L"},
-    {"from": "q_back", "read": "_", "to": "q0",     "write": "_", "move": "R"},
-
-    {"from": "q_check", "read": "X", "to": "q_check",  "write": "X", "move": "R"},
-    {"from": "q_check", "read": "_", "to": "qaccept",  "write": "_", "move": "S"},
-    {"from": "q_check", "read": "0", "to": "qreject",  "write": "0", "move": "S"},
-    {"from": "q_check", "read": "1", "to": "qreject",  "write": "1", "move": "S"}
+    {"from": "q_back", "read": "_", "to": "q0",     "write": "_", "move": "R"}
   ],
   "tests": [
     {"input": "",       "expected": "accept"},
@@ -64,6 +58,7 @@
     {"input": "1001",   "expected": "accept"},
     {"input": "00100",  "expected": "accept"},
     {"input": "11011",  "expected": "accept"},
+    {"input": "0101010","expected": "accept"},
     {"input": "01",     "expected": "reject"},
     {"input": "10",     "expected": "reject"},
     {"input": "001",    "expected": "reject"},
