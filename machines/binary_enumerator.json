@@ -1,8 +1,8 @@
 {
   "name": "binary_enumerator",
   "mode": "enumerator",
-  "description": "Enumerador de cadenas binarias en orden canonico: epsilon, 0, 1, 00, 01, 10, 11, 000, ... Este modo no decide pertenencia a un lenguaje: acepta cualquier cadena binaria que recibe, demostrando que el lenguaje de todas las cadenas binarias es recursivamente enumerable. El motor detecta el modo 'enumerator' y ejecuta con logica simplificada.",
-  "states": ["q0", "qaccept", "qreject"],
+  "description": "Enumerador de cadenas binarias en orden canonico: epsilon, 0, 1, 00, 01, 10, 11, 000, ... Acepta cualquier cadena binaria recorriendo toda la cinta de izquierda a derecha. Al llegar al blanco final acepta. Demuestra que el lenguaje de todas las cadenas binarias es recursivamente enumerable.",
+  "states": ["q0", "q_scan", "qaccept", "qreject"],
   "input_alphabet": ["0", "1"],
   "tape_alphabet": ["0", "1", "_"],
   "blank": "_",
@@ -10,9 +10,12 @@
   "accept": "qaccept",
   "reject": "qreject",
   "transitions": [
-    {"from": "q0", "read": "0", "to": "qaccept", "write": "0", "move": "R"},
-    {"from": "q0", "read": "1", "to": "qaccept", "write": "1", "move": "R"},
-    {"from": "q0", "read": "_", "to": "qaccept", "write": "_", "move": "S"}
+    {"from": "q0",     "read": "_", "to": "qaccept", "write": "_", "move": "S"},
+    {"from": "q0",     "read": "0", "to": "q_scan",  "write": "0", "move": "R"},
+    {"from": "q0",     "read": "1", "to": "q_scan",  "write": "1", "move": "R"},
+    {"from": "q_scan", "read": "0", "to": "q_scan",  "write": "0", "move": "R"},
+    {"from": "q_scan", "read": "1", "to": "q_scan",  "write": "1", "move": "R"},
+    {"from": "q_scan", "read": "_", "to": "qaccept", "write": "_", "move": "S"}
   ],
   "tests": [
     {"input": "",    "expected": "accept"},
